@@ -21,9 +21,9 @@ discardstart = 0.0;
 % provide directory of the data files & naming pattern here
 if exist('C:\EEG Data\cancan', 'dir')
     filedir = 'C:\EEG Data\cancan';
-elseif exist()
+elseif exist('/data/group/FANS/cancan/eeg/', 'dir')
+    filedir = '/data/group/FANS/cancan/eeg/';
 end
-filedir = 'C:\EEG Data\cancan';
 
 files = dir([filedir, '\*sat*.eeg']);
 
