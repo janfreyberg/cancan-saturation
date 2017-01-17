@@ -1,3 +1,8 @@
+# autosave files
+*.asv
+
+# data files
+
 # History files
 .Rhistory
 .Rapp.history
