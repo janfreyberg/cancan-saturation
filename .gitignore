@@ -1,9 +1,9 @@
 # autosave files
-.asv
+*.asv
 
 # data files
-.mat
-.csv
+*.mat
+*.csv
 
 # History files
 .Rhistory
