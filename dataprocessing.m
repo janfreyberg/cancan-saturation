@@ -55,7 +55,7 @@ for isubject = 1:numel(files)
         tmp = ft_definetrial(cfg_deftrials);
         % Manually add the trigger code
         tmp.trl(:, 4) = trigger;
-        trl = vertcat(trl, tmp.trl);
+        trl = vertcat(trl, tmp.trl); %#ok<AGROW>
     end
     
     
@@ -122,27 +122,44 @@ for isubject = 1:numel(files)
         noisechannels = noisechannels | ...
                         any(fft_data(i).snrall > 200, 2);
         % anything with an SNR of below two is irrelevant
+        noisechannels = noisechannels | ...
+                        any(fft_data(i).snrstimfreq < 2, 2);
     end
     % set those electrodes to NaN in the frequency spectrum
     for i = 1:numel(triggers)
         fft_data(i).powspctrm(noisechannels, :) = NaN;
         fft_data(i).snrall(noisechannels, :) = NaN;
+        fft_data(i).snrstimfreq(noisechannels, :) = NaN;
     end
     
     
     % Calculate weighted amplitude
     for i = 1:numel(triggers)
-        fft_data(i) = ssvep_combine_harmonic_amplitudes(fft_data);
+        fft_data(i).weightedamplitude = [];
+        fft_data(i) = ssvep_combine_harmonic_amplitudes(fft_data(i));
     end
     
+    % find the maximal signal electrode in max stim cond
+    [~, maxelec] = max(mean([fft_data(:).snrstimfreq], 2));
+    % display the amplitude at those spots
+%     disp([fft_data(1).weightedamplitude(maxelec),...
+%             fft_data(2).weightedamplitude(maxelec),...
+%             fft_data(3).weightedamplitude(maxelec),...
+%             fft_data(4).weightedamplitude(maxelec)]);
     
+    
+    % add these values to a large running variable
+    stim16(isubject, 1) = fft_data(1).weightedamplitude(maxelec);
+    stim32(isubject, 1) = fft_data(2).weightedamplitude(maxelec);
+    stim64(isubject, 1) = fft_data(3).weightedamplitude(maxelec);
+    stim100(isubject, 1) = fft_data(4).weightedamplitude(maxelec);
     
 %     % A quick plot
 %     figure;
 %     title(files(isubject).id);
 %     for i = 1:numel(triggers)
 %         subplot(4, 1, i);
-%         plot(fft_data(i).freq, fft_data(i).powspctrm(~noisechannels, :));
+%         plot(fft_data(i).freq, fft_data(i).snrall(~noisechannels, :));
 %         % ylim([0, 25]);
 %         xlim(cfg_fft.foilim);
 %         % add text to identify channels
@@ -150,25 +167,23 @@ for isubject = 1:numel(files)
 %              fft_data(i).snrall(:, find(fft_data(i).freq>=1.8, 1)),...
 %              fft_data(i).label);
 %     end
+% 
 %     % topoplot
 %     figure;
 %     for i = 1:numel(triggers)
 %         tmp_data = fft_data(i);
-%         tmp_data.snrall = tmp_data.snrall(:, (tmp_data.freq > 4.9 & tmp_data.freq < 5.1) | ...
-%                                             (tmp_data.freq > 9.9 & tmp_data.freq < 10.1) | ...
-%                                             (tmp_data.freq > 14.9 & tmp_data.freq < 15.1));
-%         tmp_data.freq = tmp_data.freq((tmp_data.freq > 4.9 & tmp_data.freq < 5.1) | ...
-%                                             (tmp_data.freq > 9.9 & tmp_data.freq < 10.1) | ...
-%                                             (tmp_data.freq > 14.9 & tmp_data.freq < 15.1));
 %         subplot(2, 2, i);
 %         cfg = [];
-%         cfg.parameter = 'snrall';
+%         cfg.parameter = 'weightedamplitude';
+%         tmp_data.weightedamplitude = repmat(tmp_data.weightedamplitude, 1, 2);
+%         tmp_data.freq = [4.9, 5.1];
 %         cfg.layout = 'biosemi64.lay';
-%         cfg.channel = fft_data(i).label(~noisechannels);
+%         cfg.channel = tmp_data.label(~noisechannels);
 %         ft_topoplotTFR(cfg, tmp_data);
 %     end
 %     drawnow;
     
 end
 
-
+allresults = table(stim16, stim32, stim64, stim100, 'Rownames', {files(:).id});
+writetable(allresults, 'allresults.csv', 'Delimiter', ',')
