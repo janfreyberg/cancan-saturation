@@ -20,7 +20,7 @@ discardstart = 0.0;
 
 % provide directory of the data files & naming pattern here
 if exist('C:\EEG Data\cancan\', 'dir')
-    filedir = 'C:\EEG Data\cancan';
+    filedir = 'C:\EEG Data\cancan\';
 elseif exist('/data/group/FANS/cancan/eeg/', 'dir')
     filedir = '/data/group/FANS/cancan/eeg/';
 end
@@ -42,8 +42,6 @@ progressbar; % initialise prog bar
 for isubject = 1:numel(files)
     % clear variables
     clear *_data cfg*
-    % update progress bar
-    progressbar(isubject/numel(files));
     
     % Trial Basics
     cfg_deftrials.dataset = fullfile(filedir, files(isubject).name);
@@ -153,6 +151,11 @@ for isubject = 1:numel(files)
     end
     
     % calculate a weighted average by electrode
+    for i = 1:numel(triggers)
+        fft_data(isubject, i).crosselecestimate = [];
+        fft_data(isubject, i) = ssvep_combine_electrodes(fft_data(isubject, i));
+    end
+    % TODO
     
     % find the maximal signal electrode in average
     [~, maxelec] = max(mean([fft_data(isubject, :).snrstimfreq], 2));
@@ -164,10 +167,16 @@ for isubject = 1:numel(files)
     
     
     % add these values to a large running variable
-    stim16(isubject, 1) = fft_data(isubject, 1).weightedamplitude(maxelec);
-    stim32(isubject, 1) = fft_data(isubject, 2).weightedamplitude(maxelec);
-    stim64(isubject, 1) = fft_data(isubject, 3).weightedamplitude(maxelec);
-    stim100(isubject, 1) = fft_data(isubject, 4).weightedamplitude(maxelec);
+    stim_16_maxelec(isubject, 1) = fft_data(isubject, 1).weightedamplitude(maxelec);
+    stim_32_maxelec(isubject, 1) = fft_data(isubject, 2).weightedamplitude(maxelec);
+    stim_64_maxelec(isubject, 1) = fft_data(isubject, 3).weightedamplitude(maxelec);
+    stim_100_maxelec(isubject, 1) = fft_data(isubject, 4).weightedamplitude(maxelec);
+    % now the crosselec estimate
+    stim_16_allelec(isubject, 1) = fft_data(isubject, 1).crosselecestimate;
+    stim_32_allelec(isubject, 1) = fft_data(isubject, 2).crosselecestimate;
+    stim_64_allelec(isubject, 1) = fft_data(isubject, 3).crosselecestimate;
+    stim_100_allelec(isubject, 1) = fft_data(isubject, 4).crosselecestimate;
+    
     
 %     % A quick plot
 %     figure;
@@ -197,10 +206,12 @@ for isubject = 1:numel(files)
 %         ft_topoplotTFR(cfg, tmp_data);
 %     end
 %     drawnow;
-    
+    % update progress bar
+    progressbar(isubject/numel(files));
 end
 
 % write data so far to file
 ids = {files(:).id}';
-allresults = table(ids, stim16, stim32, stim64, stim100);
+allresults = table(ids, stim_16_maxelec, stim_32_maxelec, stim_64_maxelec, stim_100_maxelec,...
+                    stim_16_allelec, stim_32_allelec, stim_64_allelec, stim_100_allelec);
 writetable(allresults, [date, '-allresults.csv'], 'Delimiter', ',')
