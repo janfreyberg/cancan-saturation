@@ -19,11 +19,13 @@ data %<>%
            str_to_lower())
 # turn the 4 different variables into a tall list & factor
 data %<>%
-  gather(stimulation, amplitude, stim16:stim100)
-# now create a contrast variable that's a numeric index
+  gather(condition, amplitude, starts_with("stim_"))
+
+# now create a contrast variable that's a numeric index & a variable for averaging method
 data %<>%
-  mutate(contrast = str_extract(stimulation, "[:digit:]+") %>%
-           as.numeric())
+  separate(condition, c("blah", "contrast", "datatype")) %>%
+  mutate(contrast = as.numeric(contrast)) %>%
+  select(-blah)
 
 data %<>%
          mutate(group = ID %>%
