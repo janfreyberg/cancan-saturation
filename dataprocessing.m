@@ -133,8 +133,8 @@ for isubject = 1:numel(files)
         noisechannels = noisechannels | ...
                         any(fft_data(isubject, i).snrall > 200, 2);
         % anything with an SNR of below two is irrelevant
-        noisechannels = noisechannels | ...
-                        any(fft_data(isubject, i).snrstimfreq < 2, 2);
+%         noisechannels = noisechannels | ...
+%                         any(fft_data(isubject, i).snrstimfreq < 2, 2);
     end
     % set those electrodes to NaN in the frequency spectrum
     for i = 1:numel(triggers)
