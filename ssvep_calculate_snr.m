@@ -50,10 +50,10 @@ noiseband = ~((fftdata.freq > fftdata.stimfreq-padbins*freqresolution) &...
             fftdata.freq < fftdata.stimfreq+noisebins*freqresolution;
 
 % calculate power in the stimband and noiseband
-stimpow = mean(fftdata.powspctrm(:, stimband), 2);
-noisepow = mean(fftdata.powspctrm(:, noiseband), 2);
+fftdata.stimpow = mean(fftdata.powspctrm(:, stimband), 2);
+fftdata.noisepow = mean(fftdata.powspctrm(:, noiseband), 2);
 
-fftdata.snrstimfreq = stimpow ./ noisepow;
+fftdata.snrstimfreq = fftdata.stimpow ./ fftdata.noisepow;
 
 
 % Process the harmonics (if requested)
