@@ -1,4 +1,4 @@
-function [fftdata] = ssvep_calculate_all_snr(fftdata)
+function [snrall] = ssvep_calculate_all_snr(fftdata)
 %SSVEP_CALC_SNR Calculate the signal to noise ratio in SSVEP
 %   The input to this function should be a fieldtrip data structure that is
 %   the result of ft_freqanalysis with some modification.
@@ -33,33 +33,44 @@ else
 end
 
 % get the resolution from the history
-freqresolution = fftdata.cfg.tapsmofrq;
-
-
-fftdata.snrall = zeros(size(fftdata.powspctrm));
-
-for i = 1:numel(fftdata.freq)
-
-    % work out the harmonic frequency
-    currfreq = fftdata.freq(i);
-
-    % calculate signal to noise
-    stimband = fftdata.freq > currfreq-freqresolution &...
-               fftdata.freq < currfreq+freqresolution;
-    noiseband = ~((fftdata.freq > currfreq-padbins*freqresolution) &...
-                  (fftdata.freq < currfreq+padbins*freqresolution)) & ...
-                fftdata.freq > currfreq-noisebins*freqresolution &...
-                fftdata.freq < currfreq+noisebins*freqresolution;
-
-    % Calculate SNR and store it in the structure
-    fftdata.snrall(:, i) = mean(fftdata.powspctrm(:, stimband), 2)./...
-                            mean(fftdata.powspctrm(:, noiseband), 2);
+try
+    freqresolution = fftdata.cfg.tapsmofrq;
+catch
+    freqresolution = fftdata.cfg.previous{1}.tapsmofrq;
 end
 
-% Make the beginning and end NaNs because they don't have any neighbours
-fftdata.snrall(:, 1:noisebins) = NaN;
-fftdata.snrall(:, end-noisebins:end) = NaN;
+if ndims(fftdata.powspctrm) == 2
+    fftdata.powspctrm = permute(fftdata.powspctrm, [3, 1, 2]);
+end
 
+fftdata.snrall = zeros(size(fftdata.powspctrm));
+for trial = 1:size(fftdata.powspctrm, 1)
+    for i = 1:numel(fftdata.freq)
+
+        % work out the harmonic frequency
+        currfreq = fftdata.freq(i);
+
+        % calculate signal to noise
+        stimband = fftdata.freq > currfreq-freqresolution &...
+                   fftdata.freq < currfreq+freqresolution;
+        noiseband = ~((fftdata.freq > currfreq-padbins*freqresolution) &...
+                      (fftdata.freq < currfreq+padbins*freqresolution)) & ...
+                    fftdata.freq > currfreq-noisebins*freqresolution &...
+                    fftdata.freq < currfreq+noisebins*freqresolution;
+
+        % Calculate SNR and store it in the structure
+        snrall(trial, :, i) = mean(fftdata.powspctrm(trial, :, stimband), 3)./...
+                                mean(fftdata.powspctrm(trial, :, noiseband), 3);
+    end
+end
+
+% If there was only one type of rpt, squeeze the data
+% disp(size(snrall));
+snrall = squeeze(snrall);
+% Make the beginning and end NaNs because they don't have any neighbours
+snrall(:, 1:noisebins) = NaN;
+snrall(:, end-noisebins:end) = NaN;
+% disp(size(snrall));
 
 % end function
 end

@@ -1,4 +1,4 @@
-function [fftdata] = ssvep_calculate_snr(fftdata)
+function [snrdata] = ssvep_calculate_snr(fftdata)
 %SSVEP_CALC_SNR Calculate the signal to noise ratio in SSVEP
 %   The input to this function should be a fieldtrip data structure that is
 %   the result of ft_freqanalysis with some modification.
@@ -38,7 +38,15 @@ else
 end
 
 % get the resolution from the history
-freqresolution = fftdata.cfg.tapsmofrq;
+try
+    freqresolution = fftdata.cfg.tapsmofrq;
+catch
+    freqresolution = fftdata.cfg.previous{1}.tapsmofrq;
+end
+
+if ndims(fftdata.powspctrm) == 2
+    fftdata.powspctrm = permute(fftdata.powspctrm, [3, 1, 2]);
+end
 
 
 % Process the stimulation frequency (fundamental)
@@ -49,40 +57,47 @@ noiseband = ~((fftdata.freq > fftdata.stimfreq-padbins*freqresolution) &...
             fftdata.freq > fftdata.stimfreq-noisebins*freqresolution &...
             fftdata.freq < fftdata.stimfreq+noisebins*freqresolution;
 
+
 % calculate power in the stimband and noiseband
-fftdata.stimpow = mean(fftdata.powspctrm(:, stimband), 2);
-fftdata.noisepow = mean(fftdata.powspctrm(:, noiseband), 2);
-
-fftdata.snrstimfreq = fftdata.stimpow ./ fftdata.noisepow;
-
+for trial = 1:size(fftdata.powspctrm, 1)
+    fftdata.stimpow(trial, :) = squeeze(mean(fftdata.powspctrm(trial, :, stimband), 3));
+    fftdata.noisepow(trial, :) = squeeze(mean(fftdata.powspctrm(trial, :, noiseband), 3));
+    fftdata.snrstimfreq(trial, :) = squeeze(fftdata.stimpow(trial, :)) ./ squeeze(fftdata.noisepow(trial, :));
+end
 
 % Process the harmonics (if requested)
 if ~isempty(harmonics)
-    fftdata.snrharmonics = zeros(size(fftdata.snrstimfreq, 1), numel(harmonics));
-    for i = 1:harmonics
-        
-        % work out the harmonic frequency
-        currfreq = fftdata.stimfreq * (i + 1);
-        
-        % deal with case in which harmonic is outside of range
-        if currfreq < fftdata.freq(1) || currfreq > fftdata.freq(end)
-            fftdata.snrharmonics(:, i) = NaN;
-            continue
+    fftdata.snrharmonics = zeros(size(fftdata.snrstimfreq, 1), size(fftdata.snrstimfreq, 2), numel(harmonics));
+    
+    for trial = 1:size(fftdata.powspctrm, 1)
+        for i = 1:harmonics
+
+            % work out the harmonic frequency
+            currfreq = fftdata.stimfreq * (i + 1);
+
+            % deal with case in which harmonic is outside of range
+            if currfreq < fftdata.freq(1) || currfreq > fftdata.freq(end)
+                fftdata.snrharmonics(:, i) = NaN;
+                continue
+            end
+
+            % calculate signal to noise
+            stimband = fftdata.freq > currfreq-freqresolution &...
+                       fftdata.freq < currfreq+freqresolution;
+            noiseband = ~((fftdata.freq > currfreq-2*freqresolution) &...
+                          (fftdata.freq < currfreq+2*freqresolution)) & ...
+                        fftdata.freq > currfreq-noisebins*freqresolution &...
+                        fftdata.freq < currfreq+noisebins*freqresolution;
+
+            % Calculate SNR and store it in the structure
+            fftdata.snrharmonics(trial, :, i) = mean(fftdata.powspctrm(trial, :, stimband), 3)./...
+                                                  mean(fftdata.powspctrm(trial, :, noiseband), 3);
         end
-        
-        % calculate signal to noise
-        stimband = fftdata.freq > currfreq-freqresolution &...
-                   fftdata.freq < currfreq+freqresolution;
-        noiseband = ~((fftdata.freq > currfreq-2*freqresolution) &...
-                      (fftdata.freq < currfreq+2*freqresolution)) & ...
-                    fftdata.freq > currfreq-noisebins*freqresolution &...
-                    fftdata.freq < currfreq+noisebins*freqresolution;
-        
-        % Calculate SNR and store it in the structure
-        fftdata.snrharmonics(:, i) = mean(fftdata.powspctrm(:, stimband), 2)./...
-                                      mean(fftdata.powspctrm(:, noiseband), 2);
     end
 end
 
-% end function
+
+% Before returning, remove the frequency data
+snrdata = rmfield(fftdata, {'powspctrm'});
+
 end
