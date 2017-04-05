@@ -24,3 +24,5 @@ vignettes/*.pdf
 .Rproj.user
 
 \.RData
+
+\.ipynb_checkpoints/
