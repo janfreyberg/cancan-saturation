@@ -1,0 +1,43 @@
+---
+title: "First analysis of saturation task"
+output:
+  slidy_presentation:
+  dev: 'svg'
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+source('./r-scripts/mung-data.R')
+```
+
+## Processing pipeline
+
+First analysis: saturation task.
+
+Steps in analysis so far:
+- Pre-processing
+  - resampled to 256 Hz
+  - automatically repaired electrodes using `autoreject`
+  - Power-spectrum density using multi-taper fast fourier transform
+- Electrode selection
+  - highest signal-to-noise ration out of electrodes at occipital pole
+
+## Slide with Bullets
+
+- Bullet 1
+- Bullet 2
+- Bullet 3
+
+## Slide with R Output
+
+```{r cars, echo = TRUE}
+summary(cars)
+```
+
+## Slide with Plot
+
+```{r pressure}
+plot(pressure)
+```
+
